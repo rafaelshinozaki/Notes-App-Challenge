@@ -12,9 +12,10 @@ class Command(BaseCommand):
         password = "123456789ABC"
 
         if not User.objects.filter(username=username).exists():
-            User.objects.create_superuser(username=username, email=email, password=password)
+            user = User.objects.create_superuser(username=username, email=email, password=password)
             self.stdout.write(self.style.SUCCESS(f"Superuser '{username}' created successfully!"))
         else:
+            user = User.objects.get(username=username)
             self.stdout.write(self.style.WARNING(f"Superuser '{username}' already exists."))
 
 
@@ -26,10 +27,14 @@ class Command(BaseCommand):
           
         try:
             for category in default_categories:
-                Category.objects.create(
+                obj, created = Category.objects.get_or_create(
+                    user=user,
                     name=category["name"],
-                    color=category["color"]
+                    defaults={"color": category["color"]}
                 )
-            self.stdout.write(self.style.SUCCESS("Default categories created successfully!"))
+                if created:
+                    self.stdout.write(self.style.SUCCESS(f"Category '{category['name']}' created successfully for user '{username}'!"))
+                else:
+                    self.stdout.write(self.style.WARNING(f"Category '{category['name']}' already exists for user '{username}'."))
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"Failed to create default categories: {str(e)}"))

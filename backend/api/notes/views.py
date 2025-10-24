@@ -27,7 +27,7 @@ class NoteViewSet(viewsets.ModelViewSet):
         category_id = self.request.query_params.get('category_id', None)
         if category_id is not None:
             # Verify category exists and belongs to user
-            category = get_object_or_404(Category, id=category_id)
+            category = get_object_or_404(Category, id=category_id, user=self.request.user)
             queryset = queryset.filter(category=category)
         
         return queryset.order_by('-updated_at')
@@ -36,6 +36,14 @@ class NoteViewSet(viewsets.ModelViewSet):
         obj = get_object_or_404(Note, id=self.kwargs['pk'], user=self.request.user)
         self.check_object_permissions(self.request, obj)
         return obj
+
+    def get_serializer_context(self):
+        """
+        Pass request context to serializer for validation
+        """
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -53,4 +61,12 @@ class CategoryViewSet(viewsets.ModelViewSet):
         """
         Filter queryset to return only user's categories.
         """
-        return Category.objects.all()
+        return Category.objects.filter(user=self.request.user).order_by('name')
+    
+    def get_serializer_context(self):
+        """
+        Pass request context to serializer for validation
+        """
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
